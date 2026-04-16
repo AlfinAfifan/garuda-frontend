@@ -2,7 +2,7 @@
 
 import { Button, Checkbox, Description, FieldError, Input, Label, Spinner, TextField, toast } from '@heroui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { getSession, signIn, useSession } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
@@ -25,10 +25,6 @@ async function createLoginPromise(values: LoginValues, callbackUrl: string) {
 
   if (result?.error) {
     throw new Error('Email atau password tidak valid');
-  }
-
-  if (!result?.ok || !result.url || result.url.includes('/login?callbackUrl=')) {
-    throw new Error('Login belum berhasil. Periksa NEXTAUTH_URL/NEXTAUTH_SECRET di Vercel.');
   }
 
   return result;
@@ -64,12 +60,6 @@ export function LoginForm() {
     });
 
     await loginPromise;
-    const session = await getSession();
-
-    if (!session?.user) {
-      throw new Error('Sesi tidak terbentuk setelah login.');
-    }
-
     router.replace(callbackUrl);
     router.refresh();
   };
