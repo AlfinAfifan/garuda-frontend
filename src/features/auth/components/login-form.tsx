@@ -112,7 +112,7 @@ export function LoginForm() {
           </Link>
         </div>
 
-        <Button type="submit" fullWidth size="lg" className="bg-primary-500 hover:bg-primary-500/90">
+        <Button type="submit" fullWidth isDisabled={isSubmitting} size="lg" className="bg-primary-500 hover:bg-primary-500/90">
           {isSubmitting ? <Spinner color="current" size="sm" /> : 'Submit'}
         </Button>
 
