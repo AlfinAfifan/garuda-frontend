@@ -8,7 +8,6 @@ const AUTH_ROUTES = new Set(['/login', '/register']);
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAuthRoute = AUTH_ROUTES.has(pathname);
-  const authSecret = process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET;
 
   const token = await getToken({
     req: request,
@@ -37,7 +36,7 @@ export async function middleware(request: NextRequest) {
 
   if (!token) {
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', `${pathname}${request.nextUrl.search}`);
+    loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
