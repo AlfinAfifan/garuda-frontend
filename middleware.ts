@@ -11,7 +11,8 @@ export async function middleware(request: NextRequest) {
 
   const token = await getToken({
     req: request,
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: authSecret,
+    secureCookie: process.env.NODE_ENV === 'production',
   });
 
   const tokenRecord = token && typeof token === 'object' ? (token as Record<string, unknown>) : {};
