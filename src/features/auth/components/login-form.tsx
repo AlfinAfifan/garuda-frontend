@@ -4,7 +4,7 @@ import { Button, Checkbox, Description, FieldError, Input, Label, Spinner, TextF
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signIn, useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -15,11 +15,10 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-async function createLoginPromise(values: LoginValues, callbackUrl: string) {
+async function createLoginPromise(values: LoginValues) {
   const result = await signIn('credentials', {
     email: values.email,
     password: values.password,
-    callbackUrl,
     redirect: false,
   });
 
@@ -32,7 +31,6 @@ async function createLoginPromise(values: LoginValues, callbackUrl: string) {
 
 export function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { status } = useSession();
 
   const {
@@ -49,9 +47,7 @@ export function LoginForm() {
   });
 
   const onSubmit = async (values: LoginValues) => {
-    const rawCallbackUrl = searchParams.get('callbackUrl');
-    const callbackUrl = rawCallbackUrl && rawCallbackUrl.startsWith('/') ? rawCallbackUrl : '/dashboard';
-    const loginPromise = createLoginPromise(values, callbackUrl);
+    const loginPromise = createLoginPromise(values);
 
     toast.promise(loginPromise, {
       loading: 'Memproses login...',
@@ -60,8 +56,7 @@ export function LoginForm() {
     });
 
     await loginPromise;
-    router.replace(callbackUrl);
-    router.refresh();
+    router.push('/');
   };
 
   if (status === 'loading') {

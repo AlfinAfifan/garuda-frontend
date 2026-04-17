@@ -61,10 +61,23 @@ export function TkkContent() {
   const userLevel = useMemo(() => extractUserLevel((session?.user as Record<string, unknown> | undefined) ?? null), [session?.user]);
 
   const isSuperAdmin = currentRole === 'super_admin';
-  const [selectedLevel, setSelectedLevel] = useState<ScoutLevel>('siaga');
-
-  const effectiveLevel = (isSuperAdmin ? selectedLevel : userLevel) as ScoutLevel | undefined;
   const defaultInstitutionFilter = session?.user?.role === 'institution' ? session?.user?.institution_id : '';
+
+  const [params, setParams] = useState<TkkPaginatedParams>({
+    page: 1,
+    limit: 10,
+    search: '',
+    institution_id: defaultInstitutionFilter || '',
+    member_id: '',
+    tkk_type_id: '',
+    level: isSuperAdmin ? 'siaga' : userLevel || '',
+    level_tkk: '',
+  });
+
+  const [memberSearch, setMemberSearch] = useState('');
+
+  const effectiveLevel = (isSuperAdmin ? params.level : userLevel) as ScoutLevel | undefined;
+  const memberQueryLevel = effectiveLevel && ['siaga', 'penggalang', 'penegak'].includes(effectiveLevel) ? effectiveLevel : 'siaga';
 
   const visibleLevelTkk = useMemo(() => {
     if (!effectiveLevel || !['siaga', 'penggalang', 'penegak'].includes(effectiveLevel)) {
@@ -91,20 +104,24 @@ export function TkkContent() {
   const [selectedTkk, setSelectedTkk] = useState<TkkPaginatedResponse | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const [params, setParams] = useState<TkkPaginatedParams>({
-    page: 1,
-    limit: 10,
-    search: '',
-    institution_id: defaultInstitutionFilter || '',
-    member_id: '',
-    tkk_type_id: '',
-    level: effectiveLevel || '',
-    level_tkk: '',
-  });
+  useEffect(() => {
+    setParams((prev) => {
+      const nextLevelTkk = visibleLevelTkk.length ? currentLevelTkk : '';
+      const nextLevel = isSuperAdmin ? prev.level || 'siaga' : memberQueryLevel;
 
-  const [memberSearch, setMemberSearch] = useState('');
+      if (prev.level === nextLevel && prev.level_tkk === nextLevelTkk) {
+        return prev;
+      }
 
-  const memberQueryLevel = effectiveLevel && ['siaga', 'penggalang', 'penegak'].includes(effectiveLevel) ? effectiveLevel : 'siaga';
+      return {
+        ...prev,
+        page: 1,
+        level: nextLevel,
+        level_tkk: nextLevelTkk,
+      };
+    });
+    setSelectedIds([]);
+  }, [currentLevelTkk, isSuperAdmin, memberQueryLevel, visibleLevelTkk.length]);
 
   const { data: tkkSummaryData } = useTkkSummary({
     level: memberQueryLevel,
@@ -301,7 +318,18 @@ export function TkkContent() {
 
         <div className="flex flex-wrap items-center gap-3">
           {isSuperAdmin && (
-            <Select aria-label="Pilih level" className="w-48" value={selectedLevel} onChange={(value) => setSelectedLevel(String(value ?? 'siaga') as ScoutLevel)}>
+            <Select
+              aria-label="Pilih level"
+              className="w-48"
+              value={params.level || 'siaga'}
+              onChange={(value) =>
+                setParams((prev) => ({
+                  ...prev,
+                  page: 1,
+                  level: String(value ?? 'siaga'),
+                }))
+              }
+            >
               <Select.Trigger className="h-10 border border-gray-300 shadow-none">
                 <Select.Value />
                 <Select.Indicator />
