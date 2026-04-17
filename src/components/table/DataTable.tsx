@@ -1,7 +1,8 @@
 'use client';
 
+import type { SortDescriptor } from '@heroui/react';
 import { Pagination, Spinner, Table } from '@heroui/react';
-import { type ColumnDef, flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table';
+import { type ColumnDef, flexRender, getCoreRowModel, getPaginationRowModel, getSortedRowModel, type SortingState, useReactTable } from '@tanstack/react-table';
 import { useEffect, useState } from 'react';
 
 type DataTableProps<TData extends object> = {
@@ -34,23 +35,47 @@ export function DataTable<TData extends object>({
   minWidthClassName = 'min-w-[820px]',
 }: DataTableProps<TData>) {
   const [internalPageIndex, setInternalPageIndex] = useState(0);
+  const [sorting, setSorting] = useState<SortingState>([]);
   const isServerPagination = typeof currentPage === 'number' && typeof totalPages === 'number' && typeof onPageChange === 'function';
+
+  const toSortDescriptor = (sortingState: SortingState): SortDescriptor | undefined => {
+    const firstSort = sortingState[0];
+
+    if (!firstSort) return undefined;
+
+    return {
+      column: firstSort.id,
+      direction: firstSort.desc ? 'descending' : 'ascending',
+    };
+  };
+
+  const toSortingState = (descriptor: SortDescriptor): SortingState => {
+    return [{ id: descriptor.column as string, desc: descriptor.direction === 'descending' }];
+  };
+
+  const sortDescriptor = toSortDescriptor(sorting);
 
   const table = useReactTable({
     data,
     columns,
+    state: {
+      sorting,
+      ...(isServerPagination
+        ? {}
+        : {
+            pagination: {
+              pageIndex: internalPageIndex,
+              pageSize,
+            },
+          }),
+    },
+    onSortingChange: setSorting,
     ...(isServerPagination
       ? {
           manualPagination: true,
           pageCount: Math.max(totalPages ?? 1, 1),
         }
       : {
-          state: {
-            pagination: {
-              pageIndex: internalPageIndex,
-              pageSize,
-            },
-          },
           onPaginationChange: (updater: { pageIndex: number; pageSize: number } | ((prev: { pageIndex: number; pageSize: number }) => { pageIndex: number; pageSize: number })) => {
             const next = typeof updater === 'function' ? updater({ pageIndex: internalPageIndex, pageSize }) : updater;
             setInternalPageIndex(next.pageIndex);
@@ -58,6 +83,7 @@ export function DataTable<TData extends object>({
           getPaginationRowModel: getPaginationRowModel(),
         }),
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   const pageCount = isServerPagination ? Math.max(totalPages ?? 1, 1) : Math.max(table.getPageCount(), 1);
@@ -101,11 +127,16 @@ export function DataTable<TData extends object>({
   return (
     <Table variant="secondary" className="rounded-2xl border border-slate-200 bg-white">
       <Table.ScrollContainer>
-        <Table.Content aria-label={ariaLabel} className={minWidthClassName}>
+        <Table.Content aria-label={ariaLabel} className={minWidthClassName} sortDescriptor={sortDescriptor} onSortChange={(descriptor) => setSorting(toSortingState(descriptor))}>
           <Table.Header>
             {headerGroup.headers.map((header, columnIndex) => (
-              <Table.Column key={header.id} isRowHeader={columnIndex === 0} className="text-sm font-semibold text-slate-700">
-                {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+              <Table.Column key={header.id} id={header.id} isRowHeader={columnIndex === 0} allowsSorting={header.column.getCanSort()} className="text-sm font-semibold text-slate-700">
+                {({ sortDirection }) => (
+                  <span className="flex items-center justify-between gap-2">
+                    <span>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</span>
+                    {sortDirection ? <span className={sortDirection === 'descending' ? 'rotate-180 transform' : undefined}>^</span> : null}
+                  </span>
+                )}
               </Table.Column>
             ))}
           </Table.Header>
