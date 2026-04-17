@@ -27,6 +27,7 @@ async function resolveToken(request: NextRequest, secret?: string) {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAuthRoute = AUTH_ROUTES.has(pathname);
+  const authSecret = process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET;
 
   const token = await resolveToken(request, authSecret);
 
@@ -51,7 +52,7 @@ export async function middleware(request: NextRequest) {
 
   if (!token) {
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
+    loginUrl.searchParams.set('callbackUrl', `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 
